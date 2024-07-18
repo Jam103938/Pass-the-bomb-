@@ -1,0 +1,188 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local player = Players.LocalPlayer  -- Reference to the player executing the script
+local bombName = "Bomb"  -- Change this if the bomb has a different name
+
+local function createBaseplate()
+    local baseplate = Instance.new("Part")
+    baseplate.Size = Vector3.new(5, 1, 5)
+    baseplate.CFrame = CFrame.new(4.25679731, 27.192234, 0.0179801397)  -- Adjusted Y position
+    baseplate.Anchored = true
+    baseplate.BrickColor = BrickColor.new("Bright blue")
+    baseplate.Parent = Workspace
+    return baseplate
+end
+
+local baseplate = createBaseplate()  -- Create and reference the baseplate
+
+-- Function to find if the local player is holding the bomb
+local function isHoldingBomb(player)
+    return player.Character and player.Character:FindFirstChild(bombName) ~= nil
+end
+
+local function teleportToRandomPlayer()
+    local otherPlayers = Players:GetPlayers()
+    if #otherPlayers < 2 then return end
+
+    local randomPlayer
+    repeat
+        randomPlayer = otherPlayers[math.random(1, #otherPlayers)]
+    until randomPlayer ~= player and not (randomPlayer.Character and randomPlayer.Character:FindFirstChild(bombName))
+
+    local destination = randomPlayer.Character and randomPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local character = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+
+    if destination and character then
+        character.CFrame = destination.CFrame
+    end
+end
+
+-- Function to teleport player to the baseplate
+local function teleportToBaseplate()
+    local character = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+    if baseplate and character then
+        character.CFrame = baseplate.CFrame + Vector3.new(0, 3, 0)  -- Offset to avoid embedding in the baseplate
+    end
+end
+
+local autoWinEnabled = false
+local autoWinConnection
+
+local function toggleAutoWin()
+    autoWinEnabled = not autoWinEnabled
+    if autoWinEnabled then
+        autoWinConnection = RunService.Heartbeat:Connect(function()
+            if isHoldingBomb(player) then
+                teleportToRandomPlayer()
+            else
+                teleportToBaseplate()
+            end
+        end)
+    elseif autoWinConnection then
+        autoWinConnection:Disconnect()
+        autoWinConnection = nil
+    end
+end
+
+-- ESP Functionality
+local espEnabled = false
+local function toggleESP()
+    espEnabled = not espEnabled
+end
+
+local function createESP(player)
+    local line = Drawing.new("Line")
+    line.Thickness = 2
+    line.Transparency = 1
+
+    local nameTag = Drawing.new("Text")
+    nameTag.Size = 20
+    nameTag.Center = true
+    nameTag.Outline = true
+
+    local distanceTag = Drawing.new("Text")
+    distanceTag.Size = 20
+    distanceTag.Center = true
+    distanceTag.Outline = true
+
+    RunService.RenderStepped:Connect(function()
+        if espEnabled and player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = player.Character.HumanoidRootPart
+            local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
+            if onScreen then
+                line.Visible = true
+                line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
+                line.To = Vector2.new(screenPos.X, screenPos.Y)
+                
+                nameTag.Visible = true
+                nameTag.Text = player.Name
+                nameTag.Position = Vector2.new(screenPos.X, screenPos.Y - 20)
+
+                local distance = (rootPart.Position - Workspace.CurrentCamera.CFrame.Position).Magnitude
+                distanceTag.Visible = true
+                distanceTag.Text = string.format("%.2f", distance) .. " studs"
+                distanceTag.Position = Vector2.new(screenPos.X, screenPos.Y + 20)
+
+                local color = isHoldingBomb(player) and Color3.new(1, 0, 0) or Color3.new(0, 1, 0)
+                line.Color = color
+                nameTag.Color = color
+                distanceTag.Color = color
+            else
+                line.Visible = false
+                nameTag.Visible = false
+                distanceTag.Visible = false
+            end
+        else
+            line.Visible = false
+            nameTag.Visible = false
+            distanceTag.Visible = false
+        end
+    end)
+end
+
+Players.PlayerAdded:Connect(createESP)
+for _, plr in pairs(Players:GetPlayers()) do
+    createESP(plr)
+end
+
+local Window = OrionLib:MakeWindow({Name = "Pass The Bomb", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionPassTheBomb"})
+
+local MainTab = Window:MakeTab({
+    Name = "Main",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+MainTab:AddButton({
+    Name = "AUTO WINS",
+    Callback = function()
+        toggleAutoWin()
+        OrionLib:MakeNotification({
+            Name = "Auto Win Toggled!",
+            Content = autoWinEnabled and "Auto Win is now enabled." or "Auto Win is now disabled.",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+MainTab:AddButton({
+    Name = "ESP ALL PLAYERS",
+    Callback = function()
+        toggleESP()
+        OrionLib:MakeNotification({
+            Name = "ESP Toggled!",
+            Content = espEnabled and "ESP is now enabled." or "ESP is now disabled.",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+-- Create Info tab
+local InfoTab = Window:MakeTab({
+    Name = "Info",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+InfoTab:AddParagraph("Credits", "Credits to Jam {the owner} modified by {Ryo}")
+InfoTab:AddParagraph("Update Logs", "Version 1.0: Initial release with auto-win functionality and ESP for players.")
+
+InfoTab:AddButton({
+    Name = "Join Discord For Updates",
+    Callback = function()
+        setclipboard("https://discord.com/invite/bRMmg4q9f7")
+        OrionLib:MakeNotification({
+            Name = "Discord Link Copied!",
+            Content = "The Discord link has been copied to your clipboard.",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+OrionLib:Init()
