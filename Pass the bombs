@@ -58,7 +58,6 @@ local function runScript()
         local bombName = "Bomb"
 
         local teleportEnabled = false
-        local autoTeleportEnabled = false
         local teleportConnection
 
         local function isHoldingBomb()
@@ -86,37 +85,12 @@ local function runScript()
             if teleportConnection then
                 teleportConnection:Disconnect()
             end
-            
+        
             teleportConnection = RunService.Heartbeat:Connect(function()
-                if teleportEnabled then
-                    if isHoldingBomb() then
-                        teleportToRandomPlayer()
-                    else
-                        local character = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                        if character then
-                            character.CFrame = CFrame.new(0, 50, 0)
-                        end
-                    end
+                if teleportEnabled and isHoldingBomb() then
+                    teleportToRandomPlayer()
                 end
             end)
-        end
-
-        local function teleportTo(position)
-            local character = player.Character or player.CharacterAdded:Wait()
-            character:SetPrimaryPartCFrame(CFrame.new(position))
-        end
-
-        local function autoTeleport()
-            while autoTeleportEnabled do
-                for i = 0, 10 do
-                    local coin = Workspace.DisastersFolder:FindFirstChild("Coin" .. i)
-                    if coin then
-                        teleportTo(coin.Position)
-                        wait(1)
-                    end
-                end
-                wait(1)
-            end
         end
 
         local function autoRemoveMeteor()
@@ -138,23 +112,12 @@ local function runScript()
         })
 
         MainTab:AddToggle({
-            Name = "Enable Bomb Teleport (only open if you were respawn, there would be bunch of errors)",
+            Name = "Enable Bomb Teleport",
             Default = false,
             Callback = function(value)
                 teleportEnabled = value
                 if value then
                     teleportHandler()
-                end
-            end
-        })
-
-        MainTab:AddToggle({
-            Name = "Enable Auto Teleport to Coins",
-            Default = false,
-            Callback = function(value)
-                autoTeleportEnabled = value
-                if value then
-                    coroutine.wrap(autoTeleport)()
                 end
             end
         })
